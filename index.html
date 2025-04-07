@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google Maps Trajectory</title>
+    <script
+      async
+      defer
+      src="https://maps.googleapis.com/maps/api/js?key=USE_YOUR_OWN_API_KEY&callback=initMap"
+    ></script>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Poppins", sans-serif;
+      }
+
+      body {
+        background: #f4f4f4;
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      .container {
+        position: absolute;
+        top: 60px;
+        left: 20px;
+        width: 300px;
+        background: #ffffff;
+        padding: 20px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        z-index: 1000;
+      }
+
+      h2 {
+        text-align: center;
+        font-weight: 600;
+        margin-bottom: 15px;
+      }
+
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      label {
+        font-weight: 600;
+      }
+
+      input {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        outline: none;
+        transition: 0.3s;
+      }
+
+      input:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+      }
+
+      button {
+        background: #007bff;
+        color: white;
+        font-size: 16px;
+        padding: 12px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+
+      button:hover {
+        background: #0056b3;
+      }
+
+      textarea {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        outline: none;
+        transition: 0.3s;
+        resize: vertical;
+        min-height: 80px;
+        font-family: "Poppins", sans-serif;
+      }
+
+      textarea:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+      }
+
+      #map {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div class="container">
+      <h2>Google Maps Trajectory</h2>
+      <div class="controls">
+        <label>Start Location:</label>
+        <input
+          id="startLocation"
+          type="text"
+          placeholder="Enter start location"
+        />
+
+        <label>Intermediary Points (comma-separated):</label>
+        <textarea
+          id="intermediateLocations"
+          placeholder="e.g., Los Angeles, San Diego"
+          rows="3"
+        ></textarea>
+
+        <label>End Location:</label>
+        <input
+          id="endLocation"
+          type="text"
+          placeholder="Enter finish location"
+        />
+
+        <button onclick="plotTrajectory()">Show Route</button>
+      </div>
+    </div>
+
+    <script>
+      let map, geocoder, polyline;
+
+      function initMap() {
+        map = new google.maps.Map(document.getElementById("map"), {
+          center: { lat: 37.7749, lng: -122.4194 },
+          zoom: 6,
+        });
+
+        geocoder = new google.maps.Geocoder();
+      }
+
+      function plotTrajectory() {
+        const startLocation = document.getElementById("startLocation").value;
+        const intermediateLocations = document
+          .getElementById("intermediateLocations")
+          .value.split(",")
+          .map((loc) => loc.trim());
+        const endLocation = document.getElementById("endLocation").value;
+
+        const locations = [
+          startLocation,
+          ...intermediateLocations,
+          endLocation,
+        ].filter((loc) => loc !== "");
+
+        if (locations.length < 2) {
+          alert("Please enter at least a start and end location.");
+          return;
+        }
+
+        if (polyline) polyline.setMap(null);
+
+        const coordinates = [];
+        let processedCount = 0;
+
+        locations.forEach((location, index) => {
+          geocoder.geocode({ address: location }, (results, status) => {
+            if (status === "OK") {
+              const position = results[0].geometry.location;
+              coordinates[index] = position;
+
+              new google.maps.Marker({
+                position,
+                map,
+                label: `${index + 1}`,
+                title: location,
+              });
+
+              processedCount++;
+
+              if (processedCount === locations.length) {
+                drawPolyline(coordinates);
+              }
+            } else {
+              alert(`Geocode failed for ${location}: ${status}`);
+            }
+          });
+        });
+      }
+
+      function drawPolyline(coordinates) {
+        polyline = new google.maps.Polyline({
+          path: coordinates,
+          geodesic: true,
+          strokeColor: "#FF0000",
+          strokeOpacity: 1.0,
+          strokeWeight: 3,
+        });
+
+        polyline.setMap(map);
+
+        const bounds = new google.maps.LatLngBounds();
+        coordinates.forEach((coord) => bounds.extend(coord));
+        map.fitBounds(bounds);
+      }
+    </script>
+  </body>
+</html>
